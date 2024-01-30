@@ -2,7 +2,7 @@
 
 import json
 import requests
-import telg_bot
+import send_telg_msg
 
 # TODO
 # X. Implement a list to read from and iterate through all items in the list
@@ -47,6 +47,8 @@ def check_threshold(stock_info_json, t=0.5):
     diff = float(stock_info_json['yrhigh']) - float(stock_info_json['yrlow'])
     diff_t = diff * t
     threshold = float(stock_info_json['yrhigh']) - diff_t
+    
+    threshold = round(threshold, 3)
 
     print("Desired Threshold: " + str(threshold))
     
@@ -61,10 +63,8 @@ def check_threshold(stock_info_json, t=0.5):
         str_alert += "YrHigh/YrLow: " + stock_info_json['yrhigh'] + "/" + stock_info_json['yrlow'] + "\n"
         str_alert += "Ask: " + stock_info_json['ask'] + " (Size: " + stock_info_json['asksize'] + ")\n"
         str_alert += "Bid: " + stock_info_json['bid'] + " (Size: " + stock_info_json['bidsize'] + ")"
-        telg_bot.sendMessage(str_alert)
+        send_telg_msg.sendMessage(str_alert)
 
-
-telg_bot.sendMessage("Helloworld")
 
 # Start a session and initialize constant variables
 session = requests.Session()
