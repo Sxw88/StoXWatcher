@@ -6,7 +6,7 @@
 	4a. Do an ad-hoc check on followed companies
 	4b. Pull data for specific company
 	4c. Add company cashtag to followed companies
-5. Access Control List - a simple authorizzed/unauthorizzed will do ;]
+5. (DONE) Access Control List - a simple authorizzed/unauthorizzed will do ;]
 6. Logging
 7. Headless browser interaction to pull up fancy charts from Bursa?
 

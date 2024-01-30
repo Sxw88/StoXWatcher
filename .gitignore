@@ -1,6 +1,7 @@
 *.log
 conf/
 __pycache__/
-data/
+data/*
 authorized.lst
 admin.lst
+test.py
