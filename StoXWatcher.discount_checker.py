@@ -11,11 +11,11 @@ import send_telg_msg
 # 4. Ideas for interactive components for the Telegram Bot
 #   4a. Do an ad-hoc check on followed companies
 #   4b. Pull data for specific company
-#   4c. Add company cashtag to followed companies
+#   X . Add company cashtag to followed companies
 # 5. Logging
 
 # Note:
-# 1. Stockcodes(Cashtags) can be searched at https://www.bursamarketplace.com/mkt/themarket/stock
+# Data source 1 - Stockcodes(Cashtags) can be searched at https://www.bursamarketplace.com/mkt/themarket/stock
 
 def save_raw_json(json_response):
     print("\nSaving contents of response to raw_json_response.txt")
@@ -55,7 +55,7 @@ def check_threshold(stock_info_json, t=0.5):
     # If the current price of a stock is lower than the desired threshold,
     # Send an alert
     if float(stock_info_json['last']) <= threshold:
-        str_alert = "Buy Alert: " + stock_info_json['alias'] + "\n"
+        str_alert = "Discounted Stock: " + stock_info_json['alias'] + "\n"
         str_alert += "Current Price: " + stock_info_json['last'] + "\n"
         str_alert += "Lot Size: " + stock_info_json['lotsize'] + "\n"
         str_alert += "Dividend: " + stock_info_json['dividend'] + " (" + stock_info_json['yield'] + ")\n\n"

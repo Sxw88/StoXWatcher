@@ -6,6 +6,8 @@
 import requests
 import sys
 
+
+
 # Get the token for Telegram Bot
 with open('conf/telg_token', 'r') as token_file:
     telg_token = token_file.read()
@@ -29,4 +31,7 @@ def sendMessage(text_data, _token=telg_token, _method=telg_method, _chat_id=telg
     print(response)
 
 
-
+if __name__ == "__main__":
+    print("Telegram API Token   :", telg_token)
+    print("Telegram Chat ID     :", telg_chat_id)
+    sendMessage("Hello World")
