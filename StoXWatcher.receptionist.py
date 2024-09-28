@@ -15,7 +15,7 @@ def check_authorized(chatid):
     # Read file which contains a list of authorized users
     authorized_ids = []
     
-    with open('authorized.lst') as readfile:
+    with open('conf/authorized.lst') as readfile:
         authorized_ids = [line.rstrip() for line in readfile]
     
     if str_chatid in authorized_ids:
@@ -117,7 +117,7 @@ async def add_authorized(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         return_msg = 'Usage: /add_authorized <chat_id>'
 
     # Checks if user is already in the list
-    with open('authorized.lst') as readfile:
+    with open('conf/authorized.lst') as readfile:
         for line in readfile:
             if line.strip() == str(context.args[0]):
                 return_msg = "User is already authorized"
@@ -126,7 +126,7 @@ async def add_authorized(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     #   1. Argument provided is valid (int)
     #   2. User does not exist in the list yet
     if return_msg == original_msg:
-        with open('authorized.lst', 'a') as writefile:
+        with open('conf/authorized.lst', 'a') as writefile:
             writefile.write(str(context.args[0]) + "\n")
 
         chatid_filter.add_chat_ids(int(context.args[0]))
@@ -151,7 +151,7 @@ async def remove_authorized(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     return_msg = "Error: User not found"
     user_list = []
 
-    with open('authorized.lst') as readfile:
+    with open('conf/authorized.lst') as readfile:
         for line in readfile:
             user_list.append(line.strip())
 
@@ -165,7 +165,7 @@ async def remove_authorized(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         user_list.remove(str(context.args[0]))
 
         # Add the list back to the file
-        with open('authorized.lst', 'w') as writefile:
+        with open('conf/authorized.lst', 'w') as writefile:
             for user_id in user_list:
                 writefile.write(str(user_id) + "\n")
         
