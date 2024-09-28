@@ -62,7 +62,7 @@ def check_threshold(stock_info_json, t=0.5):
 
 
 # Read list of stock codes to iterate through from stockcodes.txt
-with open('stockcodes.txt', 'r') as sc_file:
+with open('conf/stockcodes.txt', 'r') as sc_file:
     stockcodes = sc_file.readlines()
 
 for stockcode in stockcodes:

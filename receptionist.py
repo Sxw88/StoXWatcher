@@ -94,7 +94,7 @@ async def check_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def get_tracked_stockcodes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     """Prints out content of stockcodes.txt"""
-    with open("stockcodes.txt", "r") as readfile:
+    with open("conf/stockcodes.txt", "r") as readfile:
         file_content = readfile.read()
     
     await update.message.reply_text(file_content)
@@ -103,7 +103,7 @@ async def get_tracked_stockcodes(update: Update, context: ContextTypes.DEFAULT_T
 async def get_tracked_stocks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     """Prints out content of stockcodes.txt plus names of stocks"""
-    with open("stockcodes.txt", "r") as readfile:
+    with open("conf/stockcodes.txt", "r") as readfile:
         stockcodes_list = readfile.readlines()
     
     msg_response = "List of Tracked Stocks: \n\n"
