@@ -10,17 +10,19 @@
 6. Logging
 7. Headless browser interaction to pull up fancy charts from Bursa?
 
-#Note:
-1. Stockcodes(Cashtags) can be searched at https://www.bursamarketplace.com/mkt/themarket/stock
+# Note:
 
-#Usage:
-##Conf folder:
+1. Data source 1: Stockcodes(Cashtags) can be searched at https://www.bursamarketplace.com/mkt/themarket/stock
+
+#Usage
+
+##Conf folder
 1. Create ./conf/ folder
 2. Create telg_chatid and telg_token files under the ./conf/ folder
 3. Put Telegram Chat ID and Telegram API token into the corresponding file
 * Both files must end with an empty line
 
-##RBAC:
+##RBAC
 1. Edit admin.lst and authorized.lst
 2. Populate both files with a list of authorized telegram user IDs / group chat IDs
 3. admin.lst contains list of authorized users who can make changes to settings via receptionist script

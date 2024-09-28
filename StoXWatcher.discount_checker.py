@@ -14,8 +14,7 @@ import send_telg_msg
 #   X . Add company cashtag to followed companies
 # 5. Logging
 
-# Note:
-# Data source 1 - Stockcodes(Cashtags) can be searched at https://www.bursamarketplace.com/mkt/themarket/stock
+
 
 def save_raw_json(json_response):
     print("\nSaving contents of response to raw_json_response.txt")
