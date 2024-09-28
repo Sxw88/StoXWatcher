@@ -2,17 +2,13 @@
 
 import json
 import requests
-import send_telg_msg
+import telegrapher
+from shared_space import getinfo_by_bursa_stockcode
 
 # TODO
 # X. Implement a list to read from and iterate through all items in the list
 # X. Create and integrate Telegram Bot for sending alerts
 # X. Implement threshold based notifications
-# 4. Ideas for interactive components for the Telegram Bot
-#   4a. Do an ad-hoc check on followed companies
-#   4b. Pull data for specific company
-#   X . Add company cashtag to followed companies
-# 5. Logging
 
 
 
@@ -54,7 +50,7 @@ def check_threshold(stock_info_json, t=0.5):
     # If the current price of a stock is lower than the desired threshold,
     # Send an alert
     if float(stock_info_json['last']) <= threshold:
-        str_alert = "Discounted Stock: " + stock_info_json['alias'] + "\n"
+        str_alert = "Discounted: " + stock_info_json['alias'] + "\n"
         str_alert += "Current Price: " + stock_info_json['last'] + "\n"
         str_alert += "Lot Size: " + stock_info_json['lotsize'] + "\n"
         str_alert += "Dividend: " + stock_info_json['dividend'] + " (" + stock_info_json['yield'] + ")\n\n"
@@ -62,17 +58,8 @@ def check_threshold(stock_info_json, t=0.5):
         str_alert += "YrHigh/YrLow: " + stock_info_json['yrhigh'] + "/" + stock_info_json['yrlow'] + "\n"
         str_alert += "Ask: " + stock_info_json['ask'] + " (Size: " + stock_info_json['asksize'] + ")\n"
         str_alert += "Bid: " + stock_info_json['bid'] + " (Size: " + stock_info_json['bidsize'] + ")"
-        send_telg_msg.sendMessage(str_alert)
+        telegrapher.sendMessage(str_alert)
 
-
-# Start a session and initialize constant variables
-session = requests.Session()
-    
-query_url = "https://www.bursamarketplace.com/index.php"
-
-query_headers = {
-    'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0'
-}
 
 # Read list of stock codes to iterate through from stockcodes.txt
 with open('stockcodes.txt', 'r') as sc_file:
@@ -80,15 +67,8 @@ with open('stockcodes.txt', 'r') as sc_file:
 
 for stockcode in stockcodes:
     stockcode = stockcode.strip()
-
-    query_params = {
-        'tpl':'stock_ajax',
-        'type':'gettixdetail',
-        'code':stockcode
-    }
-
-    # Make the actual query
-    r1 = session.get(query_url, params=query_params, headers=query_headers)
+    
+    r1 = getinfo_by_bursa_stockcode(stockcode)
 
     if r1.status_code == 200:
         # Parse JSON response data

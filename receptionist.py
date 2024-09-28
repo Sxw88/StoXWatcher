@@ -1,11 +1,20 @@
 #!/usr/bin/python3
 
 import logging
+import json
+import os
+
+from shared_space import getinfo_by_bursa_stockcode
 
 from telegram import ForceReply, Update
 from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
 
-# TODO: help 
+# TODO: 
+# 1. help 
+# 2. Ideas for interactive components for the Telegram Bot
+#   2a. Do an ad-hoc check on a specific company
+#   2b. Pull data for specific company
+#   2c. Add/remove company cashtags to stockcodes.txt
 
 def check_authorized(chatid):
 
@@ -81,6 +90,42 @@ async def check_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Helps user find out their Telegram IDs"""
     await update.message.reply_text(str(update.effective_chat.id))
 
+
+async def get_tracked_stockcodes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+    """Prints out content of stockcodes.txt"""
+    with open("stockcodes.txt", "r") as readfile:
+        file_content = readfile.read()
+    
+    await update.message.reply_text(file_content)
+
+    
+async def get_tracked_stocks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+
+    """Prints out content of stockcodes.txt plus names of stocks"""
+    with open("stockcodes.txt", "r") as readfile:
+        stockcodes_list = readfile.readlines()
+    
+    msg_response = "List of Tracked Stocks: \n\n"
+    
+    for stockcode_raw in stockcodes_list:
+        stockname = "Nil"
+        stockcode = stockcode_raw[:-1]
+        
+        if os.path.exists(f"data/{stockcode}.json"):
+            # Get stock name from existing json data file
+            with open(f"data/{stockcode}.json", "r") as readjson:
+                json_data = json.load(readjson)
+            
+            stockname = json_data.get("name", "StockNameNotFound")
+        else:
+            # If stock name not found, call API to get stock name
+            r1 = getinfo_by_bursa_stockcode(stockcode)
+            stockname = r1.json().get("name", "StockNameNotFoundOnline")
+            
+        msg_response += f"{stockcode}: {str(stockname)}\n"
+    
+    await update.message.reply_text(msg_response)
 
 
 async def update_authorized(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -197,6 +242,8 @@ def main() -> None:
     # on different commands - answer in Telegram
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("get_tracked_stockcodes", get_tracked_stockcodes))
+    application.add_handler(CommandHandler("get_tracked_stocks", get_tracked_stocks))
     
     """Another restriction handler to restrict Chat IDs which are not admins"""
     restrict_admin_handler = MessageHandler(~admin_chatid_filter, restrict_admin)
