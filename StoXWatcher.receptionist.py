@@ -28,7 +28,7 @@ def get_authorized_list():
     # Reads file which contains a list of authorized users
     authorized_list = []
     
-    with open('authorized.lst') as readfile:
+    with open('conf/authorized.lst') as readfile:
         authorized_list = [int(line.rstrip()) for line in readfile]
 
     return authorized_list
@@ -38,7 +38,7 @@ def get_admin_list():
     # Reads file which contains a list of authorized users with admin privileges
     adm_list = []
     
-    with open('admin.lst') as readfile:
+    with open('conf/admin.lst') as readfile:
         adm_list = [int(line.rstrip()) for line in readfile]
 
     return adm_list
