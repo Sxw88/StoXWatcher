@@ -157,7 +157,7 @@ async def add_tracked_stocks(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     if return_msg == original_msg:
         with open("conf/stockcodes.txt", "a") as apefile:
-            apefile.write("\n" + str(context.args[0]))
+            apefile.write(str(context.args[0]))
             
         return_msg += str(context.args[0])
     
