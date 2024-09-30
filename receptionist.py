@@ -1,20 +1,23 @@
 #!/usr/bin/python3
 
-import logging
-import json
 import os
+import json
+import logging
 
 from shared_space import getinfo_by_bursa_stockcode
 
-from telegram import ForceReply, Update
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters
+from logging.handlers import RotatingFileHandler
+from telegram import ForceReply, Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
 
 # TODO: 
 # 1. help 
 # 2. Ideas for interactive components for the Telegram Bot
 #   2a. Do an ad-hoc check on a specific company
 #   2b. Pull data for specific company
-#   2c. Add/remove company cashtags to stockcodes.txt
+#   xc. Add/remove company cashtags to stockcodes.txt
+# 3. Rotational logging
+
 
 def check_authorized(chatid):
 
@@ -110,7 +113,7 @@ async def get_tracked_stocks(update: Update, context: ContextTypes.DEFAULT_TYPE)
     
     for stockcode_raw in stockcodes_list:
         stockname = "Nil"
-        stockcode = stockcode_raw[:-1]
+        stockcode = stockcode_raw.replace("\n", "")
         
         if os.path.exists(f"data/{stockcode}.json"):
             # Get stock name from existing json data file
@@ -126,6 +129,75 @@ async def get_tracked_stocks(update: Update, context: ContextTypes.DEFAULT_TYPE)
         msg_response += f"{stockcode}: {str(stockname)}\n"
     
     await update.message.reply_text(msg_response)
+
+
+async def add_tracked_stocks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    
+    """Adds cashtag to stockcodes.txt"""
+    
+    return_msg = "Adding tracked stock with cashtag $"
+    original_msg = return_msg
+    
+    # Check if the argument supplied is an valid cashtag
+    try:
+        # Perform the check via an API call to bursaonline
+        r1 = getinfo_by_bursa_stockcode(str(context.args[0]))
+        stockname = r1.json().get("name", "StockNameNotFoundOnline")
+        
+        if stockname == "StockNameNotFoundOnline":
+            return_msg = 'Usage: /add_tracked_stocks <cashtag>'
+            
+        # Also check if provided cashtag is already in the list
+        with open('conf/stockcodes.txt', "r") as readfile:
+            for line in readfile:
+                if line.strip() == str(context.args[0]):
+                    return_msg = f"Provided cashtag ${context.args[0]} already exists."
+    except:
+        return_msg = 'Usage: /add_tracked_stocks <cashtag>'
+    
+    if return_msg == original_msg:
+        with open("conf/stockcodes.txt", "a") as apefile:
+            apefile.write("\n" + str(context.args[0]))
+            
+        return_msg += str(context.args[0])
+    
+    await update.message.reply_text(return_msg)
+
+
+async def remove_tracked_stocks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    
+    """Remove a cashtag from stockcodes.txt"""
+    
+    return_msg = "Removing tracked stock with cashtag $"
+    original_msg = return_msg
+    cashtag_list = []
+    
+    # Check if the argument supplied is valid
+    try:
+        # Check if the provided cashtag already exists in stockcodes.txt
+        return_msg = f"Stock with cashtag ${context.args[0]} does not exist.\n"
+        return_msg += "Usage: /remove_tracked_stocks <cashtag>"
+        
+        # Logic here is to create a new list (cashtag_list) without the cashtag to be removed
+        with open('conf/stockcodes.txt', "r") as readfile:
+            for line in readfile:
+                if line.strip() == str(context.args[0]):
+                    return_msg = original_msg
+                else:
+                    cashtag_list.append(line.strip())
+    except:
+        return_msg = 'Usage: /remove_tracked_stocks <cashtag>'
+    
+    if return_msg == original_msg:
+        # Overwrite stockcodes.txt with the new list (cashtag_list)
+        with open("conf/stockcodes.txt", "w") as writefile:
+            for cashtag in cashtag_list[:-1]:
+                writefile.write(str(cashtag) + "\n")
+            writefile.write(str(cashtag_list[-1]))
+            
+        return_msg += str(context.args[0])
+    
+    await update.message.reply_text(return_msg)
 
 
 async def update_authorized(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -239,7 +311,7 @@ def main() -> None:
     restrict_user_handler = MessageHandler(~chatid_filter, restrict_user)
     application.add_handler(restrict_user_handler)
 
-    # on different commands - answer in Telegram
+    # These functions are only accessible if user is authorized
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("get_tracked_stockcodes", get_tracked_stockcodes))
@@ -249,6 +321,9 @@ def main() -> None:
     restrict_admin_handler = MessageHandler(~admin_chatid_filter, restrict_admin)
     application.add_handler(restrict_admin_handler)
 
+    # These functions are only accessible if user is admin
+    application.add_handler(CommandHandler("add_tracked_stocks", add_tracked_stocks))
+    application.add_handler(CommandHandler("remove_tracked_stocks", remove_tracked_stocks))    
     application.add_handler(CommandHandler("update_authorized", update_authorized))
     application.add_handler(CommandHandler("add_authorized", add_authorized))
     application.add_handler(CommandHandler("remove_authorized", remove_authorized))
@@ -261,17 +336,28 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    # Enable logging
+    
+    '''Enable Logging'''
+    
+    # Max log filesize 1 MB
+    log_handler = RotatingFileHandler('receptionist.log', maxBytes=1000000, backupCount=5)
+
     logging.basicConfig(
-        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", 
-        level=logging.INFO,
-        filename='receptionist.log'
+        handlers = [log_handler],
+        format="%(asctime)s:%(levelname)s - %(message)s", 
+        level=logging.INFO
     )
+
+    logger = logging.getLogger(__name__)
 
     # set higher logging level for httpx to avoid all GET and POST requests being logged
     logging.getLogger("httpx").setLevel(logging.WARNING)
-    logger = logging.getLogger(__name__)
 
+    logger.info("Starting receptionist.py")
+    
+    
+    '''Initialize Telegram Bot'''
+    
     # Initialize the chat ID filter objects
     chatid_filter = filters.Chat(get_authorized_list())
     admin_chatid_filter = filters.Chat(get_admin_list())
@@ -281,4 +367,7 @@ if __name__ == "__main__":
         telg_token = token_file.read()
         telg_token = telg_token[:-1]
 
+
+    '''Main Function'''
+    
     main()
