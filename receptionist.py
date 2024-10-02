@@ -8,15 +8,49 @@ from shared_space import getinfo_by_bursa_stockcode
 
 from logging.handlers import RotatingFileHandler
 from telegram import ForceReply, Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler
+from telegram.ext import Updater, Application, CommandHandler, ContextTypes, MessageHandler, filters, CallbackQueryHandler, CallbackContext
+
 
 # TODO: 
-# 1. help 
+# X. help menu with fancy buttons
 # 2. Ideas for interactive components for the Telegram Bot
 #   2a. Do an ad-hoc check on a specific company
 #   2b. Pull data for specific company
 #   xc. Add/remove company cashtags to stockcodes.txt
-# 3. Rotational logging
+# X. Rotational logging
+
+
+# Global variables for help menu
+# These string variables hold the usage instructions
+usage_check_id  = """Usage: /check_id
+Returns the Telegram user ID / group ID.
+The resultant ID can be added to authorized.lst via add_authorized to allow the user to access further commands."""
+
+usage_get_tracked_stocks = """Usage: /get_tracked_stocks
+Return list of currently tracked stocks. 
+The list is used by other components of the Telegram bot to perform daily scheduled checks.
+To get the raw contents of the list, use /get_tracked_stockcodes"""
+
+usage_modify_tracked_stocks = """Usage: /add_tracked_stocks <CASHTAG>
+Adds a stock by its cashtag to the list of currently tracked stocks.
+
+Usage: /remove_tracked_stocks <CASHTAG>
+Removes a stock by its cashtag from the list of currently tracked stocks.
+
+* A cashtag is a 4-letter identifier in the Bursa stock market"""
+
+usage_modify_authorized_users = """Usage: /add_authorized <User ID or Group ID>
+Adds a user / group to the list of authorized bot users.
+
+Usage: /remove_authorized <User ID or Group ID>
+Removes a user / group from the list of authorized bot users.
+
+* Authorized users are able to use more functions, but certain functions are restricted to admin only.
+* User ID / group ID can be retrieved using the /check_id command"""
+
+usage_update_authorized_lst = """Usage: /update_authorized
+Updates the list of authorized users and administrators to the currently running bot.
+This is required when adding a new admin user for the changes to take effect. (Either that or restart the bot)"""
 
 
 def check_authorized(chatid):
@@ -77,15 +111,40 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
 
     await update.message.reply_html(
-        rf"Hi {user.mention_html()}!",
+        rf"Hi {user.mention_html()}! Use /help to see available commands.",
         reply_markup=ForceReply(selective=True),
     )
 
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
-    """Send a message when the command /help is issued."""
-    await update.message.reply_text("Help!")
+    """Display a list of available commands."""
+    keyboard = [
+        [InlineKeyboardButton("Check your Telegram ID", callback_data='check_id')],
+        [InlineKeyboardButton("Get a list of tracked stocks", callback_data='get_tracked_stocks')],
+        [InlineKeyboardButton("Add/remove tracked stocks by Bursa cashtags", callback_data='modify_tracked_stocks')],
+        [InlineKeyboardButton("Add/remove authorized users", callback_data='modify_authorized_users')],
+        [InlineKeyboardButton("Update authorized.lst", callback_data='update_authorized_lst')]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text('Help Menu:', reply_markup=reply_markup)
+
+
+# This function returns help messages
+async def button(update: Update, context: CallbackContext) -> None:
+    query = update.callback_query
+    await query.answer()
+    
+    command_responses = {
+        'check_id'                  : usage_check_id,
+        'get_tracked_stocks'        : usage_get_tracked_stocks,
+        'modify_tracked_stocks'     : usage_modify_tracked_stocks,
+        'modify_authorized_users'   : usage_modify_authorized_users,
+        'update_authorized_lst'     : usage_update_authorized_lst
+    }
+
+    if query.data in command_responses:
+        await context.bot.send_message(chat_id=query.message.chat.id, text=command_responses[query.data])
 
 
 async def check_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -314,6 +373,7 @@ def main() -> None:
     # These functions are only accessible if user is authorized
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CallbackQueryHandler(button))
     application.add_handler(CommandHandler("get_tracked_stockcodes", get_tracked_stockcodes))
     application.add_handler(CommandHandler("get_tracked_stocks", get_tracked_stocks))
     
