@@ -4,7 +4,7 @@ import os
 import json
 import logging
 
-from shared_space import getinfo_by_bursa_stockcode
+from shared_space import update_json_data, getinfo_by_bursa_stockcode, check_discount_threshold
 
 from logging.handlers import RotatingFileHandler
 from telegram import ForceReply, Update, InlineKeyboardButton, InlineKeyboardMarkup
@@ -14,7 +14,7 @@ from telegram.ext import Updater, Application, CommandHandler, ContextTypes, Mes
 # TODO: 
 # X. help menu with fancy buttons
 # 2. Ideas for interactive components for the Telegram Bot
-#   2a. Do an ad-hoc check on a specific company
+#   Xa. Do an ad-hoc check on a specific company
 #   2b. Pull data for specific company
 #   xc. Add/remove company cashtags to stockcodes.txt
 # X. Rotational logging
@@ -30,6 +30,13 @@ usage_get_tracked_stocks = """Usage: /get_tracked_stocks
 Return list of currently tracked stocks. 
 The list is used by other components of the Telegram bot to perform daily scheduled checks.
 To get the raw contents of the list, use /get_tracked_stockcodes"""
+
+usage_check_stock = """Usage: /check_stock <CASHTAG>
+Returns basic information of the stock pulled from Bursa based on the provided cashtag.
+
+Also checks the stock price against a threshold and determine whether it is a good time to buy in.
+
+threshold = yrhigh - [(yrhigh - yrlow) * 0.7]"""
 
 usage_modify_tracked_stocks = """Usage: /add_tracked_stocks <CASHTAG>
 Adds a stock by its cashtag to the list of currently tracked stocks.
@@ -122,6 +129,7 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     keyboard = [
         [InlineKeyboardButton("Check your Telegram ID", callback_data='check_id')],
         [InlineKeyboardButton("Get a list of tracked stocks", callback_data='get_tracked_stocks')],
+        [InlineKeyboardButton("Check a stock", callback_data='check_stock')],
         [InlineKeyboardButton("Add/remove tracked stocks by Bursa cashtags", callback_data='modify_tracked_stocks')],
         [InlineKeyboardButton("Add/remove authorized users", callback_data='modify_authorized_users')],
         [InlineKeyboardButton("Update authorized.lst", callback_data='update_authorized_lst')]
@@ -138,6 +146,7 @@ async def button(update: Update, context: CallbackContext) -> None:
     command_responses = {
         'check_id'                  : usage_check_id,
         'get_tracked_stocks'        : usage_get_tracked_stocks,
+        'check_stock'               : usage_check_stock, 
         'modify_tracked_stocks'     : usage_modify_tracked_stocks,
         'modify_authorized_users'   : usage_modify_authorized_users,
         'update_authorized_lst'     : usage_update_authorized_lst
@@ -150,12 +159,14 @@ async def button(update: Update, context: CallbackContext) -> None:
 async def check_id(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     """Helps user find out their Telegram IDs"""
+    
     await update.message.reply_text(str(update.effective_chat.id))
 
 
 async def get_tracked_stockcodes(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     """Prints out content of stockcodes.txt"""
+    
     with open("conf/stockcodes.txt", "r") as readfile:
         file_content = readfile.read()
     
@@ -188,6 +199,47 @@ async def get_tracked_stocks(update: Update, context: ContextTypes.DEFAULT_TYPE)
         msg_response += f"{stockcode}: {str(stockname)}\n"
     
     await update.message.reply_text(msg_response)
+
+
+async def check_stock(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    
+    """Checks the stock price against a threshold and determine whether it is a good time to buy in
+
+    threshold = yrhigh - [(yrhigh - yrlow) * t]
+    
+    Higher value of t, lower the threshold - default t = 0.7 """
+    
+    return_msg = "Checking stock with cashtag $"
+    original_msg = return_msg
+    stockcode = "N.A."
+    
+    # Check if the argument supplied is an valid cashtag
+    try:
+        stockcode = str(context.args[0])
+    
+        # Perform the check via an API call to bursaonline
+        r1 = getinfo_by_bursa_stockcode(stockcode)
+        stockname = r1.json().get("name", "StockNameNotFoundOnline")
+        
+        if stockname == "StockNameNotFoundOnline":
+            return_msg = 'Usage: /check_discount <cashtag>'
+            
+    except:
+        return_msg = 'Usage: /check_discount <cashtag>'
+    
+    if return_msg == original_msg:
+        return_msg += stockcode
+        original_msg = return_msg
+    
+    await update.message.reply_text(return_msg)
+    
+    if return_msg == original_msg:
+        r2 = getinfo_by_bursa_stockcode(stockcode)
+        check_discount_threshold(r2.json(), t=0.7, return_desired_only=False)
+    
+        if os.path.exists(f"data/{stockcode}.json"):
+            await update.message.reply_text(f"Updating {stockcode}.json")
+            update_json_data(r2)
 
 
 async def add_tracked_stocks(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -376,6 +428,7 @@ def main() -> None:
     application.add_handler(CallbackQueryHandler(button))
     application.add_handler(CommandHandler("get_tracked_stockcodes", get_tracked_stockcodes))
     application.add_handler(CommandHandler("get_tracked_stocks", get_tracked_stocks))
+    application.add_handler(CommandHandler("check_stock", check_stock))
     
     """Another restriction handler to restrict Chat IDs which are not admins"""
     restrict_admin_handler = MessageHandler(~admin_chatid_filter, restrict_admin)
