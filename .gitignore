@@ -2,6 +2,7 @@
 conf/
 __pycache__/
 data/*
+*.json
 authorized.lst
 admin.lst
 test.py
